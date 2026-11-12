@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+/* The only place raw colour values live. Components use the Tailwind tokens below. */
+:root {
+  --ground: #fff4ec;
+  --surface: #ffffff;
+  --ink: #2b1436;
+  --muted: #5e4a66;
+  --line: #f3dccb;
+  --line-strong: #ddb9a2;
+  --primary: #d63a22;
+  --on-primary: #ffffff;
+  --accent-text: #c2341d;
+  --sun: #ffc93c;
+  --blush: #ffd3c7;
+  --verified: #0f6b4a;
+  --verified-surface: #d9f5e7;
+  --single: #7a5200;
+  --single-surface: #ffe9a8;
+  --unconfirmed: #5e4a66;
+  --unconfirmed-surface: #efe4ec;
+  --questions: #2b1436;
+  --on-questions: #fff4ec;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-accent-text: var(--accent-text);
+  --color-sun: var(--sun);
+  --color-blush: var(--blush);
+  --color-verified: var(--verified);
+  --color-verified-surface: var(--verified-surface);
+  --color-single: var(--single);
+  --color-single-surface: var(--single-surface);
+  --color-unconfirmed: var(--unconfirmed);
+  --color-unconfirmed-surface: var(--unconfirmed-surface);
+  --color-questions: var(--questions);
+  --color-on-questions: var(--on-questions);
+
+  --font-heading: var(--font-fraunces);
+  --font-body: var(--font-manrope);
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-manrope), system-ui, sans-serif;
+}
