@@ -1,4 +1,4 @@
-# Secrets never enter the image: Render injects them at runtime.
+# Secrets never enter the image: Railway injects them at runtime.
 .env*
 
 .git
@@ -15,7 +15,6 @@ design
 tsconfig.tsbuildinfo
 Dockerfile
 .dockerignore
-render.yaml
 
 # The gateway has its own image (bifrost/Dockerfile).
 bifrost

@@ -83,30 +83,45 @@ Subjects for the `try-*` scripts: `"Company name"`, `"person:Full Name"` or
 `"person:Full Name@Their Company"`. With `USE_FIXTURE=1` in development, the app returns the
 saved fixture instead of calling Tavily or the model.
 
-## Deploy (Render, Docker)
+## Deploy (Railway, Docker)
 
-`render.yaml` deploys two free Docker web services from `main`:
+One Railway project holds two services, both built from this repository's Dockerfiles:
 
-- **foreword**: this app (`Dockerfile`).
-- **foreword-bifrost**: the Bifrost gateway (`bifrost/Dockerfile`, pinned to v2.5.1, configured by
-  `bifrost/config.json`). It is public, so it is locked down: every model call needs the virtual key,
-  the dashboard needs the admin login, and only chat models of Groq and Gemini are allowed.
+- **foreword**: this app (`Dockerfile`, a standalone Next.js server). The only public service.
+- **foreword-gateway**: the Bifrost gateway (`bifrost/Dockerfile`, pinned to v2.5.1, configured by
+  `bifrost/config.json`). It has no public address: Foreword reaches it over Railway's private
+  network. It is locked down all the same: every model call needs the virtual key, the dashboard
+  needs the admin login, and only chat models of Groq and Gemini are allowed.
 
-Every push to `main` runs `.github/workflows/ci.yml`: lint, types, tests and build; the app image is
-started and must serve the page; the gateway image is started and must refuse calls without the key
-and the admin API without a login. Render deploys only after those checks pass, and rebuilds each
-service only when its own files change.
+Every push runs `.github/workflows/ci.yml`: lint, types, tests and build; the app image is started
+and must serve the page; the gateway image is started and must refuse calls without the key and
+the admin API without a login. With **Wait for CI** on, Railway deploys only after those pass.
 
 First time only:
 
 1. Push the repository to GitHub (`origin` is `github.com/ngounou-tp/prep-app`).
-2. In Render, choose **New > Blueprint**, pick this repository, and apply `render.yaml`.
-3. Enter the secrets when Render asks:
-   - foreword-bifrost: `GROQ_API_KEY`, `GEMINI_API_KEY`, `BIFROST_ADMIN_USERNAME`,
-     `BIFROST_ADMIN_PASSWORD`, and `BIFROST_VIRTUAL_KEY`: any long random value that starts with
-     `sk-bf-`. Render copies it to Foreword, so it is entered once.
-   - foreword: `TAVILY_API_KEY`, and `BIFROST_URL`: the gateway's address as Render shows it,
-     such as `https://foreword-bifrost.onrender.com`.
+2. In Railway, **New Project > Deploy from GitHub repo**, pick this repository. Railway finds the
+   root `Dockerfile`. Rename the service `foreword`.
+3. In the same project, **Create > GitHub Repo**, the same repository again. In its **Settings**, set
+   **Root Directory** to `/bifrost` and rename it `foreword-gateway`. Do not generate a domain for it.
+4. On **foreword-gateway > Variables**: `GROQ_API_KEY`, `GEMINI_API_KEY`, `BIFROST_ADMIN_USERNAME`,
+   `BIFROST_ADMIN_PASSWORD`, and `BIFROST_VIRTUAL_KEY`: any long random value that starts with `sk-bf-`.
+   Under **Settings > Deploy**, set the healthcheck path to `/health`.
+5. On **foreword > Variables** (Railway fills in the references):
+
+   | Name | Value |
+   | --- | --- |
+   | `TAVILY_API_KEY` | Your Tavily key |
+   | `BIFROST_URL` | `http://${{foreword-gateway.RAILWAY_PRIVATE_DOMAIN}}:10000` |
+   | `BIFROST_API_KEY` | `${{foreword-gateway.BIFROST_VIRTUAL_KEY}}` |
+   | `BIFROST_MODEL` | `auto` |
+   | `BIFROST_FALLBACK_MODELS` | `auto` |
+   | `LLM_PAUSE_MS` | `3000`: free-tier providers rate-limit back-to-back calls |
+
+   Under **Settings > Deploy**, set the healthcheck path to `/`; under **Networking**, generate a
+   public domain.
+6. On both services, **Settings > Source**: turn on **Wait for CI**. For the gateway, set the watch
+   path to `/bifrost/**` so it rebuilds only when its own files change.
 
 After that, merging to `main` is the whole release. To try the app image locally:
 
@@ -115,10 +130,9 @@ docker build -t foreword .
 docker run --rm -p 10000:10000 --env-file .env.local foreword   # http://localhost:10000
 ```
 
-Free services sleep after 15 minutes without traffic and take up to a minute to wake. Opening the
-form wakes the gateway in the background (`POST /api/wake`, at most once a minute), so it is usually
-awake by the time the briefing starts. Open the app a minute before a demo. Free instance hours are
-shared across a Render workspace, so two services kept awake all month would run out.
+Railway gives new accounts trial credit, then charges by usage on a paid plan; check its pricing
+page. Services stay awake unless you turn on sleeping; if you do, opening the form wakes the gateway
+in the background (`POST /api/wake`, at most once a minute).
 
 ## Project structure
 

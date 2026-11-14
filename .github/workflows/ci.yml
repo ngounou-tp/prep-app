@@ -1,5 +1,5 @@
-# Checks every push and pull request. Render deploys main only once these pass
-# (autoDeployTrigger: checksPass in render.yaml). No secret is needed: tests mock every API.
+# Checks every push and pull request. Railway deploys main only once these pass (each service's
+# "Wait for CI" setting). No secret is needed: tests mock every API.
 name: CI
 
 on:
