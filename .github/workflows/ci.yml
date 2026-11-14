@@ -1,5 +1,6 @@
-# Checks every push and pull request. Railway deploys main only once these pass (each service's
-# "Wait for CI" setting). No secret is needed: tests mock every API.
+# Checks every push and pull request. Whichever host runs Foreword deploys main only once these pass:
+# Render through autoDeployTrigger: checksPass in render.yaml, Railway through each service's
+# "Wait for CI" setting. No secret is needed: tests mock every API.
 name: CI
 
 on:
@@ -80,7 +81,8 @@ jobs:
             --env BIFROST_VIRTUAL_KEY=sk-bf-ci-placeholder \
             --env BIFROST_ADMIN_USERNAME=ci --env BIFROST_ADMIN_PASSWORD=ci-placeholder-password \
             foreword-bifrost:ci
-          for attempt in $(seq 1 60); do
+          # The gateway loads its model catalogue before it answers, which can take a minute.
+          for attempt in $(seq 1 120); do
             curl --silent --fail http://localhost:10001/health > /dev/null && break
             sleep 1
           done

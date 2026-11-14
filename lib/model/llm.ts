@@ -12,7 +12,7 @@ export { LlmError } from "@/lib/model/llmErrors";
 
 const REQUEST_TIMEOUT_MILLISECONDS = 40_000;
 const MODEL_LIST_TIMEOUT_MILLISECONDS = 10_000;
-// A sleeping gateway (a Railway service with sleeping on) can take a while to answer its first request.
+// A sleeping gateway (Render's free plan, or Railway with sleeping on) can take a minute to answer.
 const WAKE_TIMEOUT_MILLISECONDS = 70_000;
 const DEFAULT_RATE_LIMIT_WAIT_MILLISECONDS = 5_000;
 const MAX_RATE_LIMIT_WAIT_MILLISECONDS = 15_000;

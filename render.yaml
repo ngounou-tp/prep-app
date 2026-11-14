@@ -1,0 +1,69 @@
+# Render Blueprint, one of the two supported hosts (the other is Railway: see the README). Foreword
+# and its Bifrost gateway, two free Docker web services deployed from main only after the GitHub
+# checks pass (.github/workflows/ci.yml). Secrets are entered once in the Render dashboard, never
+# committed. Each service rebuilds only when its own files change.
+services:
+  - type: web
+    name: foreword
+    runtime: docker
+    repo: https://github.com/ngounou-tp/prep-app
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: frankfurt
+    plan: free
+    healthCheckPath: /
+    autoDeployTrigger: checksPass
+    buildFilter:
+      ignoredPaths:
+        - bifrost/**
+        - "**/*.md"
+    envVars:
+      - key: TAVILY_API_KEY
+        sync: false
+      # The gateway's public address, https://foreword-bifrost.onrender.com or the URL Render shows for it.
+      - key: BIFROST_URL
+        sync: false
+      # The same virtual key the gateway was given, copied by Render so it is entered only once.
+      - key: BIFROST_API_KEY
+        fromService:
+          type: web
+          name: foreword-bifrost
+          envVarKey: BIFROST_VIRTUAL_KEY
+      - key: BIFROST_MODEL
+        value: auto
+      - key: BIFROST_FALLBACK_MODELS
+        value: auto
+      # Free-tier providers rate-limit back-to-back calls; 3 s apart still fits the 55-second budget.
+      - key: LLM_PAUSE_MS
+        value: "3000"
+
+  # Public on Render (private services are not free there), so it is locked down in
+  # bifrost/config.json: every model call needs the virtual key, the dashboard needs the admin
+  # login, and only chat models of the two providers are allowed.
+  - type: web
+    name: foreword-bifrost
+    runtime: docker
+    repo: https://github.com/ngounou-tp/prep-app
+    branch: main
+    dockerfilePath: ./bifrost/Dockerfile
+    dockerContext: ./bifrost
+    region: frankfurt
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - bifrost/**
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # Must start with sk-bf-, or Bifrost replaces it with one Foreword cannot know.
+      - key: BIFROST_VIRTUAL_KEY
+        sync: false
+      - key: BIFROST_ADMIN_USERNAME
+        sync: false
+      - key: BIFROST_ADMIN_PASSWORD
+        sync: false

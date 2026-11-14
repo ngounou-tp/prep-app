@@ -83,21 +83,24 @@ Subjects for the `try-*` scripts: `"Company name"`, `"person:Full Name"` or
 `"person:Full Name@Their Company"`. With `USE_FIXTURE=1` in development, the app returns the
 saved fixture instead of calling Tavily or the model.
 
-## Deploy (Railway, Docker)
+## Deploy (Railway or Render, Docker)
 
-One Railway project holds two services, both built from this repository's Dockerfiles:
+Foreword deploys on **Railway** or on **Render**, whichever is available. Nothing in the code
+changes between them: both run the same two Docker images.
 
-- **foreword**: this app (`Dockerfile`, a standalone Next.js server). The only public service.
-- **foreword-gateway**: the Bifrost gateway (`bifrost/Dockerfile`, pinned to v2.5.1, configured by
-  `bifrost/config.json`). It has no public address: Foreword reaches it over Railway's private
-  network. It is locked down all the same: every model call needs the virtual key, the dashboard
-  needs the admin login, and only chat models of Groq and Gemini are allowed.
+- **foreword**: this app (`Dockerfile`, a standalone Next.js server on port 10000, or on `PORT` when
+  the host sets it).
+- **foreword-gateway** (Railway) or **foreword-bifrost** (Render): the Bifrost gateway
+  (`bifrost/Dockerfile`, pinned to v2.5.1, configured by `bifrost/config.json`). It is locked down:
+  every model call needs the virtual key, the dashboard needs the admin login, and only chat models
+  of Groq and Gemini are allowed. On Railway it is also private; on Render it is public, because
+  private services are not free there.
 
 Every push runs `.github/workflows/ci.yml`: lint, types, tests and build; the app image is started
 and must serve the page; the gateway image is started and must refuse calls without the key and
-the admin API without a login. With **Wait for CI** on, Railway deploys only after those pass.
+the admin API without a login. Both hosts are set to deploy `main` only after those pass.
 
-First time only:
+### Option 1: Railway
 
 1. Push the repository to GitHub (`origin` is `github.com/ngounou-tp/prep-app`).
 2. In Railway, **New Project > Deploy from GitHub repo**, pick this repository. Railway finds the
@@ -123,16 +126,35 @@ First time only:
 6. On both services, **Settings > Source**: turn on **Wait for CI**. For the gateway, set the watch
    path to `/bifrost/**` so it rebuilds only when its own files change.
 
-After that, merging to `main` is the whole release. To try the app image locally:
+Railway gives new accounts trial credit, then charges by usage on a paid plan; check its pricing page.
+
+### Option 2: Render
+
+1. Push the repository to GitHub.
+2. In Render, choose **New > Blueprint**, pick this repository, and apply `render.yaml`. It creates
+   both services, deploying only after CI passes (`autoDeployTrigger: checksPass`).
+3. Enter the secrets when Render asks:
+   - foreword-bifrost: `GROQ_API_KEY`, `GEMINI_API_KEY`, `BIFROST_ADMIN_USERNAME`,
+     `BIFROST_ADMIN_PASSWORD`, and `BIFROST_VIRTUAL_KEY` (starts with `sk-bf-`). Render copies it to
+     Foreword, so it is entered once.
+   - foreword: `TAVILY_API_KEY`, and `BIFROST_URL`: the gateway's address as Render shows it, such
+     as `https://foreword-bifrost.onrender.com`.
+
+Free Render services sleep after 15 minutes without traffic and take up to a minute to wake, and
+free instance hours are shared across a workspace.
+
+### Either way
+
+After the first setup, merging to `main` is the whole release. To try the app image locally:
 
 ```bash
 docker build -t foreword .
 docker run --rm -p 10000:10000 --env-file .env.local foreword   # http://localhost:10000
 ```
 
-Railway gives new accounts trial credit, then charges by usage on a paid plan; check its pricing
-page. Services stay awake unless you turn on sleeping; if you do, opening the form wakes the gateway
-in the background (`POST /api/wake`, at most once a minute).
+The gateway loads its model catalogue before it answers, which can take a minute after a deploy.
+When a host puts it to sleep, opening the form wakes it in the background (`POST /api/wake`, at most
+once a minute). Open the app a minute before a demo.
 
 ## Project structure
 
