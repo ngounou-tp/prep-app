@@ -33,6 +33,9 @@ services:
         value: auto
       - key: BIFROST_FALLBACK_MODELS
         value: auto
+      # Free-tier providers rate-limit back-to-back calls; 3 s apart still fits the 55-second budget.
+      - key: LLM_PAUSE_MS
+        value: "3000"
 
   # Public, so it is locked down in bifrost/config.json: every model call needs the virtual key,
   # the dashboard needs the admin login, and only chat models of the two providers are allowed.

@@ -148,7 +148,8 @@ design/                 Reference designs
 2. **Search**: a few Tavily searches per subject, at most 12 per briefing.
 3. **Clean**: drop duplicate, off-window and non-http sources, then trim and rank the rest.
 4. **Extract**: one model call per subject, which sees only that subject's sources.
-5. **Verify**: code checks each quote against its source and assigns the status.
+5. **Verify**: code checks each quote against its source, merges one fact reported by several sites,
+   and assigns the status: Verified needs the quote found and two independent sites.
 6. **Write**: one model call for the snapshot and questions, given verified and single-source claims only.
 
 A briefing stays under 55 seconds. A subject that fails or runs out of time gets a note
