@@ -1,0 +1,21 @@
+# Secrets never enter the image: Render injects them at runtime.
+.env*
+
+.git
+.github
+node_modules
+.next
+coverage
+.briefings
+fixtures
+tests
+scripts
+design
+*.md
+tsconfig.tsbuildinfo
+Dockerfile
+.dockerignore
+render.yaml
+
+# The gateway has its own image (bifrost/Dockerfile).
+bifrost

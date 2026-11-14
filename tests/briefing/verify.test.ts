@@ -110,6 +110,24 @@ describe("verifyClaims", () => {
     expect(results[0]?.subjectIds).toEqual(["c1", "p1"]);
   });
 
+  it("verifies one fact that two sites report, even when each claim cites only one of them", () => {
+    const wire = source("S2", {
+      domain: "wire.example",
+      url: "https://wire.example/S2",
+      subjectIds: ["p1"],
+      content: "Logistics news: Northwind Freight has opened a cold-chain hub in Rotterdam, the company said.",
+    });
+    const results = verifyClaims(
+      [
+        claim({ text: "Northwind Freight opened a cold-chain hub in Rotterdam." }),
+        claim({ text: "Northwind Freight has opened a cold-chain hub in Rotterdam.", subjectIds: ["p1"], sourceIds: ["S2"], quote: "Northwind Freight has opened a cold-chain hub in Rotterdam" }),
+      ],
+      [source("S1"), wire],
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ status: "verified", subjectIds: ["c1", "p1"], sourceIds: ["S1", "S2"], quoteSourceId: "S1" });
+  });
+
   it("sorts verified first, then single-source, then unconfirmed, newest first within each", () => {
     const wire = source("S2", { domain: "wire.example", url: "https://wire.example/S2" });
     const results = verifyClaims(

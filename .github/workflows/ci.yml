@@ -1,0 +1,97 @@
+# Checks every push and pull request. Render deploys main only once these pass
+# (autoDeployTrigger: checksPass in render.yaml). No secret is needed: tests mock every API.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types, tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    name: Docker image starts and serves the page
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: foreword:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Run the image and request the landing page
+        run: |
+          docker run --detach --name foreword --publish 10000:10000 foreword:ci
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://localhost:10000/ > /dev/null; then
+              echo "The landing page answered."
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs foreword
+          exit 1
+
+  gateway:
+    name: Bifrost gateway starts and refuses calls without the key
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./bifrost
+          load: true
+          tags: foreword-bifrost:ci
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,mode=max,scope=gateway
+      - name: Run the gateway with placeholder keys and check its access rules
+        run: |
+          docker run --detach --name gateway --publish 10001:10000 \
+            --env GROQ_API_KEY=placeholder --env GEMINI_API_KEY=placeholder \
+            --env BIFROST_VIRTUAL_KEY=sk-bf-ci-placeholder \
+            --env BIFROST_ADMIN_USERNAME=ci --env BIFROST_ADMIN_PASSWORD=ci-placeholder-password \
+            foreword-bifrost:ci
+          for attempt in $(seq 1 60); do
+            curl --silent --fail http://localhost:10001/health > /dev/null && break
+            sleep 1
+          done
+          curl --silent --fail http://localhost:10001/health
+          without_key=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{"model":"groq/openai/gpt-oss-20b","messages":[{"role":"user","content":"hi"}]}' \
+            http://localhost:10001/v1/chat/completions)
+          admin=$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:10001/api/providers)
+          echo "model call without key: $without_key, admin API without login: $admin"
+          if [ "$without_key" != "401" ] || [ "$admin" != "401" ]; then
+            docker logs gateway
+            exit 1
+          fi

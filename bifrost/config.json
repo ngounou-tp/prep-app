@@ -1,0 +1,50 @@
+{
+  "$schema": "https://www.getbifrost.ai/schema",
+  "auth_config": {
+    "is_enabled": true,
+    "admin_username": "env.BIFROST_ADMIN_USERNAME",
+    "admin_password": "env.BIFROST_ADMIN_PASSWORD"
+  },
+  "logs_store": { "enabled": false },
+  "client": {
+    "enforce_auth_on_inference": true,
+    "allow_direct_keys": false,
+    "enable_logging": false,
+    "disable_content_logging": true
+  },
+  "providers": {
+    "groq": {
+      "keys": [{ "name": "groq", "value": "env.GROQ_API_KEY", "models": ["*"], "weight": 1.0 }]
+    },
+    "gemini": {
+      "keys": [{ "name": "gemini", "value": "env.GEMINI_API_KEY", "models": ["*"], "weight": 1.0 }]
+    }
+  },
+  "governance": {
+    "virtual_keys": [
+      {
+        "id": "foreword",
+        "name": "foreword",
+        "description": "The Foreword web service",
+        "value": "env.BIFROST_VIRTUAL_KEY",
+        "is_active": true,
+        "provider_configs": [
+          {
+            "provider": "groq",
+            "allowed_models": ["*"],
+            "blacklisted_models": ["regex:.*(embed|whisper|orpheus|tts|speech|transcri|audio|image|veo|lyria|moderation|rerank|guard|aqa|antigravity|gemma|computer-use|robotics|-live).*"],
+            "key_ids": ["*"],
+            "weight": 1.0
+          },
+          {
+            "provider": "gemini",
+            "allowed_models": ["*"],
+            "blacklisted_models": ["regex:.*(embed|whisper|orpheus|tts|speech|transcri|audio|image|veo|lyria|moderation|rerank|guard|aqa|antigravity|gemma|computer-use|robotics|-live).*"],
+            "key_ids": ["*"],
+            "weight": 1.0
+          }
+        ]
+      }
+    ]
+  }
+}

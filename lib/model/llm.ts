@@ -12,6 +12,8 @@ export { LlmError } from "@/lib/model/llmErrors";
 
 const REQUEST_TIMEOUT_MILLISECONDS = 40_000;
 const MODEL_LIST_TIMEOUT_MILLISECONDS = 10_000;
+// A sleeping free Render instance can take up to a minute to answer its first request.
+const WAKE_TIMEOUT_MILLISECONDS = 70_000;
 const DEFAULT_RATE_LIMIT_WAIT_MILLISECONDS = 5_000;
 const MAX_RATE_LIMIT_WAIT_MILLISECONDS = 15_000;
 // With "auto", how many models one call may try before giving up.
@@ -162,3 +164,18 @@ export function createModelClient(environment: Environment, pause: (milliseconds
 }
 
 export type ModelClient = ReturnType<typeof createModelClient>;
+
+// Waking the gateway while the user fills in the form keeps its start-up time out of the
+// briefing's 55 seconds. /health needs no key, so none is sent.
+export async function wakeGateway(environment: Environment): Promise<boolean> {
+  const connection: Connection = { baseUrl: environment.BIFROST_URL.replace(/\/+$/, ""), apiKey: undefined };
+  try {
+    await requestJson(connection, "/health", { method: "GET" }, WAKE_TIMEOUT_MILLISECONDS);
+    return true;
+  } catch (error) {
+    if (error instanceof LlmError) {
+      return false;
+    }
+    throw error;
+  }
+}

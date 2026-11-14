@@ -83,6 +83,43 @@ Subjects for the `try-*` scripts: `"Company name"`, `"person:Full Name"` or
 `"person:Full Name@Their Company"`. With `USE_FIXTURE=1` in development, the app returns the
 saved fixture instead of calling Tavily or the model.
 
+## Deploy (Render, Docker)
+
+`render.yaml` deploys two free Docker web services from `main`:
+
+- **foreword**: this app (`Dockerfile`).
+- **foreword-bifrost**: the Bifrost gateway (`bifrost/Dockerfile`, pinned to v2.5.1, configured by
+  `bifrost/config.json`). It is public, so it is locked down: every model call needs the virtual key,
+  the dashboard needs the admin login, and only chat models of Groq and Gemini are allowed.
+
+Every push to `main` runs `.github/workflows/ci.yml`: lint, types, tests and build; the app image is
+started and must serve the page; the gateway image is started and must refuse calls without the key
+and the admin API without a login. Render deploys only after those checks pass, and rebuilds each
+service only when its own files change.
+
+First time only:
+
+1. Push the repository to GitHub (`origin` is `github.com/ngounou-tp/prep-app`).
+2. In Render, choose **New > Blueprint**, pick this repository, and apply `render.yaml`.
+3. Enter the secrets when Render asks:
+   - foreword-bifrost: `GROQ_API_KEY`, `GEMINI_API_KEY`, `BIFROST_ADMIN_USERNAME`,
+     `BIFROST_ADMIN_PASSWORD`, and `BIFROST_VIRTUAL_KEY`: any long random value that starts with
+     `sk-bf-`. Render copies it to Foreword, so it is entered once.
+   - foreword: `TAVILY_API_KEY`, and `BIFROST_URL`: the gateway's address as Render shows it,
+     such as `https://foreword-bifrost.onrender.com`.
+
+After that, merging to `main` is the whole release. To try the app image locally:
+
+```bash
+docker build -t foreword .
+docker run --rm -p 10000:10000 --env-file .env.local foreword   # http://localhost:10000
+```
+
+Free services sleep after 15 minutes without traffic and take up to a minute to wake. Opening the
+form wakes the gateway in the background (`POST /api/wake`, at most once a minute), so it is usually
+awake by the time the briefing starts. Open the app a minute before a demo. Free instance hours are
+shared across a Render workspace, so two services kept awake all month would run out.
+
 ## Project structure
 
 ```text

@@ -27,6 +27,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // A self-contained server in .next/standalone, so the Docker image ships no dev dependencies.
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

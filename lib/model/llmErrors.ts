@@ -2,7 +2,19 @@
 // endpoint, Bifrost's error code and a trimmed, key-masked message. Never the key, prompt or URL.
 import { readErrorMessage, readErrorType, readRetryHint } from "@/lib/model/bifrostResponse";
 
-type LlmErrorKind = "http" | "unauthorized" | "rate-limit" | "timeout" | "network" | "malformed" | "cancelled" | "no-models";
+// model-unavailable and provider-unavailable: Bifrost accepted the key, but this model, or every
+// model of this provider, cannot be used, so "auto" can move on to another.
+type LlmErrorKind =
+  | "http"
+  | "unauthorized"
+  | "model-unavailable"
+  | "provider-unavailable"
+  | "rate-limit"
+  | "timeout"
+  | "network"
+  | "malformed"
+  | "cancelled"
+  | "no-models";
 
 export class LlmError extends Error {
   readonly kind: LlmErrorKind;
@@ -33,13 +45,34 @@ function accessMessage(status: number, keySent: boolean, body: unknown): string 
     : `Bifrost requires a key: set BIFROST_API_KEY (${detail})`;
 }
 
+// A quota of zero means the account's plan does not include the model; waiting will not help.
+const NO_QUOTA = /\blimit:\s*0\b/i;
+
+// Bifrost's own access errors carry a top-level type; errors relayed from a provider do not.
+function accessError(status: number, keySent: boolean, body: unknown): LlmError {
+  if (readErrorType(body) === "model_blocked") {
+    console.error(`Bifrost does not allow this model for the virtual key (status ${status})`);
+    return new LlmError("model-unavailable", status);
+  }
+  const fromGateway = typeof body === "object" && body !== null && "type" in body;
+  if (!fromGateway) {
+    console.error(`The provider refused the request (status ${status}): ${readErrorMessage(body) ?? "no message"}`);
+    return new LlmError(status === 401 ? "provider-unavailable" : "model-unavailable", status);
+  }
+  console.error(accessMessage(status, keySent, body));
+  return new LlmError("unauthorized", status);
+}
+
 export async function errorFor(response: Response, keySent: boolean, path: string): Promise<LlmError> {
   const body: unknown = await response.json().catch(() => null);
   if (response.status === 401 || response.status === 403) {
-    console.error(accessMessage(response.status, keySent, body));
-    return new LlmError("unauthorized", response.status);
+    return accessError(response.status, keySent, body);
   }
   if (response.status === 429) {
+    if (NO_QUOTA.test(readErrorMessage(body) ?? "")) {
+      console.error("The provider gives this account no quota for the model");
+      return new LlmError("model-unavailable", 429);
+    }
     return new LlmError("rate-limit", 429, readRetryHint(body));
   }
   console.error(`Bifrost ${path} failed (${describe(response.status, body)})`);

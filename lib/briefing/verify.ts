@@ -1,5 +1,6 @@
 // Assigns each claim its status by checking source ids and quotes in code. No model call here:
 // whatever a source or the model says about a claim's status is never read.
+import { mergeCorroborated } from "@/lib/briefing/corroborate";
 import { findQuoteSpan, normaliseForMatching } from "@/lib/shared/quoteMatch";
 import type { Claim, ClaimStatus, Source, VerifiedClaim } from "@/lib/types";
 
@@ -86,7 +87,7 @@ export function verifyClaims(claims: readonly Claim[], sources: readonly Source[
     const result = checkClaim(claim, sourceById);
     return result === null ? [] : [result];
   });
-  return mergeSharedClaims(checked)
+  return mergeCorroborated(mergeSharedClaims(checked), mergeInto)
     .sort(compareClaims)
     .map((claim, index) => ({ id: `C${index + 1}`, ...claim }));
 }

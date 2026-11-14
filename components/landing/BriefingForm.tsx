@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { briefingSearchParams } from "@/lib/client/briefingLink";
 import { formErrors, type FormErrors } from "@/lib/client/meetingForm";
+import { requestGatewayWake } from "@/lib/client/wakeGateway";
 import { briefingInputSchema, type BriefingInput } from "@/lib/types";
 import { Card } from "../Card";
 import { Icon } from "../Icon";
@@ -32,6 +33,9 @@ function Form({ initialInput, notice }: BriefingFormProps) {
   const meeting = useMeetingFields(initialInput);
   const invite = useInviteImport((details) => meeting.fillFromInvite(details.meetingAt, details.title));
   const [errors, setErrors] = useState<FormErrors>({});
+  useEffect(() => {
+    void requestGatewayWake();
+  }, []);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

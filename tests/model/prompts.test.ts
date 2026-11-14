@@ -23,7 +23,7 @@ describe("extractPrompt", () => {
   });
 
   it("states the extraction rules", () => {
-    for (const rule of ["One specific development per claim", "lists every source", "word for word", "8 to 30 words", "only if a source states it", "similar names", "Skip opinion", '{"claims": []}', "JSON only"]) {
+    for (const rule of ["One specific development per claim", "lists every source", "never one claim per source", "word for word", "8 to 30 words", "only if a source states it", "similar names", "Skip opinion", '{"claims": []}', "JSON only"]) {
       expect(prompt).toContain(rule);
     }
   });

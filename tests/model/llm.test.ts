@@ -119,16 +119,16 @@ describe("chat", () => {
 
   it("with auto, skips a model that refuses the request and keeps it skipped for the briefing", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const models = () => jsonResponse({ data: [{ id: "gemini/gemma-3-1b-it" }, { id: "groq/openai/gpt-oss-120b" }] });
-    const refusal = { error: { message: "Developer instruction is not enabled for models/gemma-3-1b-it" } };
-    const fetchMock = stubBifrost((request) => (request.model === "gemini/gemma-3-1b-it" ? jsonResponse(refusal, 400) : completion("hello")), models);
+    const models = () => jsonResponse({ data: [{ id: "gemini/learnlm-2.0-flash" }, { id: "groq/openai/gpt-oss-120b" }] });
+    const refusal = { error: { message: "Developer instruction is not enabled for models/learnlm-2.0-flash" } };
+    const fetchMock = stubBifrost((request) => (request.model === "gemini/learnlm-2.0-flash" ? jsonResponse(refusal, 400) : completion("hello")), models);
     const client = createModelClient({ ...TEST_ENVIRONMENT, BIFROST_MODEL: "auto" });
     expect((await client.chat("system", "user")).text).toBe("hello");
     await client.chat("system", "user");
-    expect(chatRequestsSent(fetchMock).map((request) => request.model)).toEqual(["gemini/gemma-3-1b-it", "groq/openai/gpt-oss-120b", "groq/openai/gpt-oss-120b"]);
+    expect(chatRequestsSent(fetchMock).map((request) => request.model)).toEqual(["gemini/learnlm-2.0-flash", "groq/openai/gpt-oss-120b", "groq/openai/gpt-oss-120b"]);
     expect(log.mock.calls.map(([line]) => String(line))).toEqual([
-      "Bifrost /v1/chat/completions failed (status 400: Developer instruction is not enabled for models/gemma-3-1b-it)",
-      "Skipping gemini/gemma-3-1b-it for this briefing: it refused the request. Trying the next available model.",
+      "Bifrost /v1/chat/completions failed (status 400: Developer instruction is not enabled for models/learnlm-2.0-flash)",
+      "Skipping gemini/learnlm-2.0-flash for this briefing: it cannot be used. Trying the next available model.",
     ]);
   });
 
