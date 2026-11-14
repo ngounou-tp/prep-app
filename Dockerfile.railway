@@ -1,0 +1,37 @@
+# syntax=docker/dockerfile:1
+# One-container variant for Railway: Foreword and its Bifrost gateway in the same service.
+# Bifrost listens on 127.0.0.1:10001 inside the container, so set BIFROST_URL=http://127.0.0.1:10001.
+# Foreword listens on $PORT (set PORT=8080 on the service).
+
+FROM node:22-alpine AS dependencies
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+FROM node:22-alpine AS build
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+FROM maximhq/bifrost:v2.5.1 AS gateway
+
+FROM node:22-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    HOSTNAME=0.0.0.0 \
+    APP_DIR=/app/gateway \
+    APP_HOST=127.0.0.1 \
+    APP_PORT=10001 \
+    LOG_STYLE=json
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=gateway --chown=node:node /app/main /app/gateway-bin/main
+COPY --from=gateway --chown=node:node /app/docker-entrypoint.sh /app/gateway-bin/docker-entrypoint.sh
+COPY --chown=node:node bifrost/config.json /app/gateway/config.json
+COPY --chown=node:node scripts/railway-start.sh /app/railway-start.sh
+RUN chmod +x /app/railway-start.sh /app/gateway-bin/docker-entrypoint.sh /app/gateway-bin/main
+USER node
+CMD ["/app/railway-start.sh"]
