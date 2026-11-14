@@ -46,10 +46,82 @@
 
   --font-heading: var(--font-fraunces);
   --font-body: var(--font-manrope);
+
+  --radius-card: 20px;
+  --radius-form: 28px;
+  --radius-input: 14px;
+  --radius-chip: 16px;
+  --radius-tile: 12px;
+  --shadow-card: 0 14px 34px rgba(214, 58, 34, 0.12);
 }
 
 body {
   background: var(--ground);
   color: var(--ink);
   font-family: var(--font-manrope), system-ui, sans-serif;
+}
+
+/* One visible focus ring everywhere; on the plum card it switches to sun for contrast. */
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.on-plum :focus-visible {
+  outline-color: var(--sun);
+}
+
+@keyframes drift-sun {
+  to {
+    transform: translate(-18px, 14px) scale(1.03);
+  }
+}
+
+@keyframes drift-blush {
+  to {
+    transform: translate(16px, -20px) scale(0.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Print: the result page prints its own one-page report (components/result/PrintBriefing.tsx)
+ * and hides the screen layout. data-print="hide" removes controls on any other page.
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 10.5pt;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* The report's tints and status colours carry meaning, so browsers must not drop them. */
+  [data-print-report] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }

@@ -1,0 +1,11 @@
+// Used only by `npm run try-research` (tsx). Next.js resolves "server-only" internally and no
+// npm package is installed, so outside Next it points at the no-op build Next.js ships.
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../*"],
+      "server-only": ["../node_modules/next/dist/compiled/server-only/empty.js"]
+    }
+  }
+}
