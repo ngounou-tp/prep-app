@@ -1,0 +1,13 @@
+.env*
+.git
+.github
+node_modules
+.next
+coverage
+.briefings
+fixtures
+tests
+design
+*.md
+tsconfig.tsbuildinfo
+render.yaml
